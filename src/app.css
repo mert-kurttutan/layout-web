@@ -217,7 +217,7 @@ textarea {
   background-size: 20px 20px;
 }
 
-.preview-surface svg {
+.svg-preview {
   width: min(100%, 900px);
   height: auto;
   max-height: 100%;
@@ -225,6 +225,7 @@ textarea {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: white;
+  object-fit: contain;
 }
 
 .empty-state {

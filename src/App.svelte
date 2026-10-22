@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
+  import { renderDot } from './lib';
+
   const sampleDot = `digraph G {
   rankdir=LR;
   node [shape=box, style="rounded,filled", fillcolor="#eef2ff"];
@@ -12,71 +15,49 @@
 }`;
 
   let dotSource = $state(sampleDot);
-  let svgOutput = $state('');
+  let svgUrl = $state('');
   let status = $state('Ready');
   let lastCompiledAt = $state('');
   let fileInput: HTMLInputElement | undefined = $state();
-
   const lineCount = $derived(dotSource.trim() ? dotSource.split(/\r?\n/).length : 0);
   const charCount = $derived(dotSource.length);
 
-  function escapeHtml(value: string) {
-    return value
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;');
+  function setSvgPreview(svg: string) {
+    if (svgUrl) URL.revokeObjectURL(svgUrl);
+    svgUrl = svg ? URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' })) : '';
   }
 
-  function compilePreview() {
-    status = 'Compiled with placeholder renderer';
-    lastCompiledAt = new Date().toLocaleTimeString();
-    svgOutput = createPlaceholderSvg(dotSource);
+  async function compilePreview() {
+    status = 'Compiling…';
+    try {
+      setSvgPreview(await renderDot(dotSource));
+      status = 'Compiled by layout-rs WASM';
+      lastCompiledAt = new Date().toLocaleTimeString();
+    } catch (error) {
+      setSvgPreview('');
+      status = `Compile failed: ${error instanceof Error ? error.message : String(error)}`;
+      lastCompiledAt = '';
+    }
   }
 
-  function createPlaceholderSvg(source: string) {
-    const title = source.match(/(?:di)?graph\s+([A-Za-z0-9_]+)/)?.[1] ?? 'DOT graph';
-    const edges = [...source.matchAll(/([A-Za-z0-9_"]+)\s*->\s*([A-Za-z0-9_"]+)/g)].slice(0, 4);
-    const edgeLabels = edges.length
-      ? edges.map((edge) => `${edge[1].replaceAll('"', '')} -> ${edge[2].replaceAll('"', '')}`)
-      : ['WASM compiler output will render here'];
+  onDestroy(() => {
+    if (svgUrl) URL.revokeObjectURL(svgUrl);
+  });
 
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 420" role="img" aria-label="${escapeHtml(title)} preview">
-  <rect width="760" height="420" rx="0" fill="#f8fafc"/>
-  <rect x="44" y="42" width="672" height="336" rx="8" fill="#ffffff" stroke="#d4d8e2"/>
-  <text x="72" y="88" font-family="Inter, system-ui, sans-serif" font-size="22" font-weight="700" fill="#111827">${escapeHtml(title)}</text>
-  <text x="72" y="118" font-family="ui-monospace, SFMono-Regular, monospace" font-size="13" fill="#667085">temporary UI renderer</text>
-  ${edgeLabels
-    .map((label, index) => {
-      const x = 92 + index * 148;
-      const nextX = x + 96;
-      return `<g>
-    <rect x="${x}" y="178" width="112" height="58" rx="7" fill="#edf5ff" stroke="#9dbce8"/>
-    <text x="${x + 56}" y="212" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#12365f">${escapeHtml(label)}</text>
-    ${index < edgeLabels.length - 1 ? `<path d="M ${nextX} 207 L ${nextX + 44} 207" stroke="#4b5563" stroke-width="2" marker-end="url(#arrow)"/>` : ''}
-  </g>`;
-    })
-    .join('')}
-  <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#4b5563"/>
-    </marker>
-  </defs>
-</svg>`;
+  function clearPreview(statusText: string) {
+    setSvgPreview('');
+    status = statusText;
+    lastCompiledAt = '';
   }
 
   function clearEditor() {
     dotSource = '';
-    svgOutput = '';
-    status = 'Cleared';
-    lastCompiledAt = '';
+    clearPreview('Cleared');
   }
 
   function resetSample() {
     dotSource = sampleDot;
-    svgOutput = '';
-    status = 'Sample loaded';
-    lastCompiledAt = '';
+    clearPreview('Sample loaded');
   }
 
   function openFilePicker() {
@@ -89,13 +70,11 @@
     if (!file) return;
 
     dotSource = await file.text();
-    svgOutput = '';
-    status = `Loaded ${file.name}`;
-    lastCompiledAt = '';
+    clearPreview(`Loaded ${file.name}`);
     input.value = '';
   }
 
-  compilePreview();
+  void compilePreview();
 </script>
 
 <main class="app-shell">
@@ -144,8 +123,8 @@
         <span class="badge">output</span>
       </div>
       <div class="preview-surface" aria-live="polite">
-        {#if svgOutput}
-          {@html svgOutput}
+        {#if svgUrl}
+          <img class="svg-preview" src={svgUrl} alt="Rendered DOT graph" />
         {:else}
           <p class="empty-state">Compile DOT to show SVG output.</p>
         {/if}
@@ -154,7 +133,7 @@
   </section>
 
   <footer class="statusbar">
-    <span>Compiler bridge: pending WASM integration</span>
+    <span>Compiler: layout-rs WebAssembly</span>
     <span>Output target: SVG</span>
   </footer>
 </main>

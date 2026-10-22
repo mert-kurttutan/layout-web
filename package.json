@@ -4,9 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "wasm:build": "node scripts/build-wasm.mjs",
+    "predev": "npm run wasm:build",
     "dev": "vite",
+    "prebuild": "npm run wasm:build",
     "build": "vite build",
     "preview": "vite preview",
+    "precheck": "npm run wasm:build",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json"
   },
   "devDependencies": {

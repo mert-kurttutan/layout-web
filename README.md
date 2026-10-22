@@ -1,5 +1,25 @@
 # Svelte + TS + Vite
 
+## Rust WebAssembly renderer
+
+The DOT preview is rendered by the `layout` Rust project in the sibling
+`../layout` directory. Install the `wasm32-unknown-unknown` Rust target and
+`wasm-pack`. The build helper uses the sibling Rust project's Nix dev shell,
+by default. Set `LAYOUT_RS_PATH` if the Rust checkout is somewhere else. For
+the current local checkout, run:
+
+```sh
+export LAYOUT_RS_PATH=/home/kmert/projects/layout-parent/layout
+npm run wasm:build
+npm run dev
+npm run build
+```
+
+Both scripts run `wasm:build` first. It generates the JavaScript bindings and
+WASM binary under `src/lib/layout-wasm`; that directory is generated output.
+The app consumes the typed API exported from `src/lib/index.ts`. To regenerate
+the WASM runtime files directly, run `npm run wasm:build`.
+
 This template should help get you started developing with Svelte and TypeScript in Vite.
 
 ## Recommended IDE Setup
