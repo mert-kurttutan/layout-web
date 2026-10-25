@@ -1,4 +1,4 @@
-import initWasm, { render_dot } from './layout-wasm/layout_wasm.js';
+import initWasm, { render_dot } from "./layout-wasm/layout_wasm.js";
 
 export interface RenderOptions {
   disableOptimizations?: boolean;
@@ -12,14 +12,7 @@ export function initializeLayoutRenderer(): Promise<void> {
   return wasmInitialization;
 }
 
-export async function renderDot(
-  source: string,
-  options: RenderOptions = {},
-): Promise<string> {
+export async function renderDot(source: string, options: RenderOptions = {}): Promise<string> {
   await initializeLayoutRenderer();
-  return render_dot(
-    source,
-    options.disableOptimizations ?? false,
-    options.disableLayout ?? false,
-  );
+  return render_dot(source, options.disableOptimizations ?? false, options.disableLayout ?? false);
 }
